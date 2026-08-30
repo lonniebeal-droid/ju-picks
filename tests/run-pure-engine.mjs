@@ -1,11 +1,54 @@
 /**
- * Offline pure settlement engine assertions (no vitest required).
- * Keep in sync with tests/settlement-engine.test.ts core cases.
+ * Zero-dependency pure settlement engine tests (no vitest required).
+ * Mirrors src/lib/settlement/engine.ts logic for offline verification.
  */
-import { createRequire } from "node:module";
 
-// Minimal pure checks embedded so this runs without compiled TS/deps.
-// Full suite remains in Vitest when node_modules is available.
+function settlePick({ direction, line, actualValue, isVoid, isFinal }) {
+  if (!isFinal) return "PENDING";
+  if (isVoid) return "VOID";
+  if (actualValue === null) return "PENDING";
+  if (direction === "HIGHER") {
+    if (actualValue > line) return "WIN";
+    if (actualValue < line) return "LOSS";
+    return "PUSH";
+  }
+  if (actualValue < line) return "WIN";
+  if (actualValue > line) return "LOSS";
+  return "PUSH";
+}
+
+function summarize(outcomes) {
+  const s = { wins: 0, losses: 0, pushes: 0, voids: 0, pending: 0, total: outcomes.length, resolved: 0 };
+  for (const o of outcomes) {
+    if (o === "WIN") { s.wins++; s.resolved++; }
+    else if (o === "LOSS") { s.losses++; s.resolved++; }
+    else if (o === "PUSH") { s.pushes++; s.resolved++; }
+    else if (o === "VOID") { s.voids++; s.resolved++; }
+    else s.pending++;
+  }
+  return s;
+}
+
+function powerOutcome(s) {
+  if (s.pending > 0) return "PENDING";
+  if (s.losses > 0) return "LOSS";
+  if (s.wins > 0) return "WIN";
+  if (s.pushes > 0) return "PUSH";
+  if (s.voids > 0) return "VOID";
+  return "PENDING";
+}
+
+function flexOutcome(s) {
+  if (s.pending > 0) return "PENDING";
+  if (s.wins === 0 && s.losses > 0) return "LOSS";
+  if (s.wins > 0 && s.losses === 0) return "WIN";
+  if (s.wins === 0 && s.losses === 0) {
+    if (s.pushes > 0) return "PUSH";
+    if (s.voids > 0) return "VOID";
+    return "PENDING";
+  }
+  return "REQUIRES_CONFIG";
+}
 
 let passed = 0;
 let failed = 0;
@@ -20,40 +63,29 @@ function assert(name, cond) {
   }
 }
 
-console.log("Pure settlement engine (offline)\n");
+console.log("Settlement pure engine tests\n");
 
-// Direction math
-assert("Higher win", 110 > 100.5);
-assert("Lower win", 90 < 100.5);
-assert("Exact push", 100.5 === 100.5);
-assert("Pending until final", true);
+assert("HIGHER win", settlePick({ direction: "HIGHER", line: 10, actualValue: 12, isVoid: false, isFinal: true }) === "WIN");
+assert("HIGHER loss", settlePick({ direction: "HIGHER", line: 10, actualValue: 8, isVoid: false, isFinal: true }) === "LOSS");
+assert("HIGHER push", settlePick({ direction: "HIGHER", line: 10, actualValue: 10, isVoid: false, isFinal: true }) === "PUSH");
+assert("LOWER win", settlePick({ direction: "LOWER", line: 10, actualValue: 7, isVoid: false, isFinal: true }) === "WIN");
+assert("LOWER loss", settlePick({ direction: "LOWER", line: 10, actualValue: 15, isVoid: false, isFinal: true }) === "LOSS");
+assert("LOWER push", settlePick({ direction: "LOWER", line: 10, actualValue: 10, isVoid: false, isFinal: true }) === "PUSH");
+assert("VOID", settlePick({ direction: "HIGHER", line: 10, actualValue: 20, isVoid: true, isFinal: true }) === "VOID");
+assert("PENDING not final", settlePick({ direction: "HIGHER", line: 10, actualValue: 20, isVoid: false, isFinal: false }) === "PENDING");
+assert("PENDING null actual", settlePick({ direction: "HIGHER", line: 10, actualValue: null, isVoid: false, isFinal: true }) === "PENDING");
 
-// Outcome vocabulary
-const outcomes = ["WIN", "LOSS", "PUSH", "VOID", "PENDING"];
-assert("Outcome set", outcomes.length === 5);
+assert("Power win", powerOutcome(summarize(["WIN", "WIN"])) === "WIN");
+assert("Power loss", powerOutcome(summarize(["WIN", "LOSS"])) === "LOSS");
+assert("Power pending", powerOutcome(summarize(["WIN", "PENDING"])) === "PENDING");
+assert("Power push", powerOutcome(summarize(["PUSH"])) === "PUSH");
+assert("Power void", powerOutcome(summarize(["VOID"])) === "VOID");
 
-// Power requires multiplier
-assert("Power missing multiplier fail-closed", true);
-
-// Flex requires flexRules
-assert("Flex missing rule fail-closed", true);
-assert("Flex pure win", true);
-assert("Flex pure loss", true);
-assert("Flex mixed requires config", true);
-assert("Flex push", true);
-assert("Flex void", true);
-
-// Real money gate
-assert("Real money disabled by default", process.env.REAL_MONEY_ENABLED !== "true");
-
-// Idempotency key length
-assert("Idempotency key min length", "abcdefgh".length >= 8);
-
-// Contests
-assert("POWER mode", "POWER" === "POWER");
-assert("FLEX mode", "FLEX" === "FLEX");
-assert("No flexTiers", true);
-assert("flexRules authoritative", true);
+assert("Flex pure win", flexOutcome(summarize(["WIN", "WIN"])) === "WIN");
+assert("Flex pure loss", flexOutcome(summarize(["LOSS"])) === "LOSS");
+assert("Flex mixed requires config", flexOutcome(summarize(["WIN", "LOSS"])) === "REQUIRES_CONFIG");
+assert("Flex push", flexOutcome(summarize(["PUSH"])) === "PUSH");
+assert("Flex void", flexOutcome(summarize(["VOID"])) === "VOID");
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
