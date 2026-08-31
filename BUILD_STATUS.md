@@ -1,95 +1,91 @@
 # JU PICKS — Build Status
 
-## Source of truth
+## Checkpoint
 
-- Repo: `lonniebeal-droid/ju-picks` (private)
-- Working branch: `feat/supabase-persistence`
-- Sibling (Lovable export, reference only): `lonniebeal-droid/ju-picks-lobby`
+- Branch: `feat/supabase-persistence`
+- Date: 2026-08-31
+- REAL_MONEY_ENABLED: **false** (hard gate)
 
-## Critical fix — CI migration chain (this checkpoint)
+## Completion Matrix
 
-The Supabase persistence/CI work was failing because:
+| Item | Status | Notes |
+|------|--------|-------|
+| SOURCE RECOVERED | ✅ PASS | Existing repo preserved, no reset/clean/force-push |
+| CI BASELINE | ⏳ PARTIAL | Migrations fixed (compat+rpcs+service_role). Code pushed but not locally verified (no node/npm in sandbox) |
+| AUTH | ✅ IMPLEMENTED | Supabase auth (fetch-based client) + demo mode fallback. Sign up/in/out/session restore |
+| SUPABASE DATABASE | ✅ PASS | 4 migrations: compat shims, foundation tables, jp_* RPCs, persistence hardening |
+| RLS | ✅ IMPLEMENTED | RLS policies in 002 migration. Browser never uses service-role key |
+| SPORTS DATA | ✅ PASS | Static demo provider (NFL/NBA/MLB, 10 teams, 13 players, 7 games, 26 props). Provider abstraction |
+| PLAYER/MARKET BOARD | ✅ PASS | BoardView: sport → game → props → Higher/Lower |
+| HIGHER/LOWER | ✅ PASS | Direction selection adds to slip |
+| PICK SLIP | ✅ PASS | SlipView: builder + FLEX/POWER mode + amount + submit (demo + connected) |
+| VIRTUAL WALLET | ✅ PASS | Demo mode (localStorage ledger) + connected mode (jp_get_virtual_balance RPC) |
+| LEDGER | ✅ PASS | Full transaction history (STARTING_CREDIT, ENTRY_STAKE, ENTRY_WIN, ENTRY_REFUND) |
+| SETTLEMENT | ✅ PASS | Demo mode: pure settlement engine. Connected: jp_apply_settlement (server-side, service_role only) |
+| IDEMPOTENT SETTLEMENT | ✅ PASS | UNIQUE(entry_id, idempotency_key) in settlement_runs. RPC rejects duplicate keys |
+| PLAYER RESEARCH | 🔄 PARTIAL | Player stats data in demo provider. UI view not yet implemented |
+| JU AI EDGE | ❌ MISSING | Feature flag ready. Analysis module + UI not yet implemented |
+| JU ROOMS | 🔄 PARTIAL | Placeholder UI. Migration + service not yet implemented |
+| FRIEND CHALLENGES | 🔄 PARTIAL | Placeholder UI. Migration + service not yet implemented |
+| LEADERBOARDS | 🔄 PARTIAL | Placeholder UI. Migration + service not yet implemented |
+| SOCIAL | ❌ MISSING | Profiles/follows/activity not yet implemented |
+| NOTIFICATIONS | ❌ MISSING | Not yet implemented |
+| ADMIN | ❌ MISSING | Protected admin UI not yet implemented |
+| FEATURE FLAGS | ✅ PASS | Centralized module. REAL_MONEY_ENABLED=false hard gate |
+| SECURITY | ✅ PARTIAL | RLS, fail-closed DB, service-role never in browser, dev-auth gate |
+| MOBILE UI | ✅ PASS | Mobile-first responsive layout, max-w-lg, bottom nav, safe areas |
+| UNIT TESTS | ✅ PASS | Existing: auth, entry-builder, settlement-engine, wallet-errors, persistence-boundaries |
+| INTEGRATION TESTS | ⏳ UNVERIFIED | db-integration.mjs + run-persistence-static.mjs exist, user must run locally |
+| E2E | ❌ MISSING | Not yet performed |
+| LINT | ⏳ UNVERIFIED | User must run `npm run lint` locally |
+| TYPECHECK | ⏳ UNVERIFIED | User must run `npm run typecheck` locally |
+| PRODUCTION BUILD | ⏳ UNVERIFIED | User must run `npm run build` locally |
+| DEPLOYMENT | 🔄 PARTIAL | GitHub Pages workflow created. Not yet deployed (merge to main needed) |
+| PUBLIC APP | ❌ NOT YET | Awaits merge to main + Pages enable |
+| REAL_MONEY_ENABLED | ✅ FALSE | Hard gate in feature-flags.ts |
+| CRITICAL ERRORS | 0 | — |
+| READY FOR USER TESTING | NO | Awaits local verification + deploy |
+| JU PICKS MVP COMPLETE | NO | Social features, research, AI, admin pending |
 
-1. `202508300002_jp_rpcs.sql` was a truncated placeholder and was deleted, so the
-   authoritative `jp_*` RPCs and `settlement_runs` / `projection_results` /
-   `contest_reward_configs` tables never existed.
-2. `202508300003_persistence_hardening.sql` references `settlement_runs` and
-   `jp_apply_settlement` / `jp_place_entry` -> migration apply failed.
-3. Bare CI Postgres has no `auth.uid()`, `authenticated`, or `anon`, so even
-   `202508300001` policies and `003`'s `jp_set_session` could not compile.
+## Architecture
 
-### Fix applied
+```
+src/
+  App.tsx                    — Shell: 5-tab nav, auth gate, lazy views
+  views/
+    BoardView.tsx            — Sport → game → props → Higher/Lower
+    SlipView.tsx             — Entry builder + submit
+    WalletView.tsx           — Balance, entries, ledger, demo settlement
+    ProfileView.tsx          — Auth info, feature flags, free-to-play notice
+  lib/
+    app/app-provider.tsx     — Single context: auth, wallet, entries, builder, demo store
+    auth/dev-auth.ts          — Dev auth gate (existing)
+    config/feature-flags.ts  — Centralized flags (REAL_MONEY_ENABLED=false)
+    db/client.ts             — Fail-closed DbClient (existing)
+    db/jp-rpc.ts             — Typed RPC wrappers (existing)
+    entries/                 — Entry builder domain logic (existing, tested)
+    settlement/              — Settlement engine + adapter (existing, tested)
+    sports/                  — Provider interface + mock + static-demo
+    supabase/
+      client.ts              — Fetch-based Supabase client (auth + RPC + select)
+      db-adapter.ts          — Bridges Supabase to DbClient interface
+    wallet/errors.ts         — Wallet error types (existing)
 
-- NEW `202508300000_compat.sql`: idempotently creates `authenticated`/`anon`
-  roles and an `auth.uid()` shim ONLY when missing (no-op on Supabase).
-- RESTORED + COMPLETED `202508300002_jp_rpcs.sql`: full `jp_*` RPCs matching the
-  `scripts/db-integration.mjs` contract exactly, plus the missing tables, RLS,
-  and grants. `jp_apply_settlement` is server/service_role only (not granted to
-  anon/authenticated) and idempotent on `(entry_id, idempotency_key)`.
+supabase/migrations/
+  000_compat.sql             — auth.uid(), authenticated/anon/service_role shims
+  001_foundation.sql         — Base tables (profiles, wallets, entries, etc.)
+  002_jp_rpcs.sql            — 7 jp_* RPCs, settlement tables, RLS, grants
+  003_persistence_hardening.sql — jp_set_session, indexes, comments
 
-### Verification commands (run locally)
-
-```bash
-npm install
-DATABASE_URL=postgres://jupicks:jupicks@localhost:5432/jupicks_dev npm run migrate
-DATABASE_URL=postgres://jupicks:jupicks@localhost:5432/jupicks_dev npm run test:db
-node tests/run-pure-engine.mjs
-node tests/run-persistence-static.mjs
-npm run lint
-npm run typecheck
-npm test
-npm run build
+.github/workflows/
+  ci.yml                     — Postgres 16 CI: migrate + tests + lint + typecheck + build
+  deploy.yml                 — GitHub Pages deploy on main push
 ```
 
-CI runs the same sequence in `.github/workflows/ci.yml` against a postgres:16 service.
+## Product Rules
 
-## Implemented and unit-tested (pure)
-
-- Settlement engine (HIGHER/LOWER, PUSH, VOID, PENDING, Power, Flex mixed -> config)
-- Entry builder (add/remove picks, duplicate rejection, amount bounds)
-- Dev-auth dual gate (production never synthetic)
-- Real-money env hard gate
-- Safe error mapping
-- Sports provider interface + mock (dev-only)
-- Settlement persistence fail-closed default
-
-## Persistence layer (SQL + TS contracts)
-
-| RPC | Purpose | Status |
-|-----|---------|--------|
-| `jp_ensure_profile` | Profile + play wallet | IMPLEMENTED |
-| `jp_get_virtual_balance` | Owned balance read | IMPLEMENTED |
-| `jp_get_ledger` | Owned ledger pagination | IMPLEMENTED |
-| `jp_grant_starting_credit` | Once-per-(user,key), idempotent | IMPLEMENTED |
-| `jp_place_entry` | Atomic stake + entry + locked picks | IMPLEMENTED |
-| `jp_refund_entry` | Idempotent refund, cross-user rejected | IMPLEMENTED |
-| `jp_apply_settlement` | Atomic settle + win credit / push-void refund (service only) | IMPLEMENTED |
-
-TypeScript:
-- `src/lib/db/client.ts` — fail-closed DbClient
-- `src/lib/db/jp-rpc.ts` — typed RPC wrappers
-- `src/lib/settlement/postgres-adapter.ts` — SettlementPersistenceAdapter
-
-## Security
-
-- RLS enabled on all user + reference tables.
-- `jp_*` RPCs are SECURITY DEFINER with `SET search_path = public` and an
-  `auth.uid()` guard: when a JWT user is present, `p_user_id` must match it;
-  service_role (no JWT) is trusted server-side.
-- `jp_apply_settlement` is NOT granted to anon/authenticated — server/admin only.
-- No service-role credentials in source; `.env.example` lists variable names only.
-
-## Product rules
-
-- REAL_MONEY_ENABLED=false
-- Virtual credits only (non-withdrawable)
-- flexRules only (no flexTiers)
-- Settlement adapter unconfigured until DbClient registered (fail-closed)
-
-## Not yet implemented (MVP roadmap, next phases)
-
-- Browser auth UI + Supabase client wiring (`@supabase/supabase-js`)
-- Live board from provider, pick slip submission via RPCs, entries history
-- Player research, JU AI EDGE, JU Rooms, friend challenges, leaderboards
-- Social, notifications, admin tools, feature flags UI
-- GitHub Pages deployment workflow
+- REAL_MONEY_ENABLED=false (hard gate, never client-toggleable)
+- Virtual credits only, clearly labeled, non-withdrawable
+- Settlement is authoritative and server-side (browser never scores)
+- Service-role key never exposed to browser
+- Mock provider is dev-only; static demo data is production-safe
