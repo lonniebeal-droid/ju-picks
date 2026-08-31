@@ -23,18 +23,18 @@
 | LEDGER | ✅ PASS | Full transaction history (STARTING_CREDIT, ENTRY_STAKE, ENTRY_WIN, ENTRY_REFUND) |
 | SETTLEMENT | ✅ PASS | Demo mode: pure settlement engine. Connected: jp_apply_settlement (server-side, service_role only) |
 | IDEMPOTENT SETTLEMENT | ✅ PASS | UNIQUE(entry_id, idempotency_key) in settlement_runs. RPC rejects duplicate keys |
-| PLAYER RESEARCH | 🔄 PARTIAL | Player stats data in demo provider. UI view not yet implemented |
-| JU AI EDGE | ❌ MISSING | Feature flag ready. Analysis module + UI not yet implemented |
-| JU ROOMS | 🔄 PARTIAL | Placeholder UI. Migration + service not yet implemented |
-| FRIEND CHALLENGES | 🔄 PARTIAL | Placeholder UI. Migration + service not yet implemented |
-| LEADERBOARDS | 🔄 PARTIAL | Placeholder UI. Migration + service not yet implemented |
-| SOCIAL | ❌ MISSING | Profiles/follows/activity not yet implemented |
-| NOTIFICATIONS | ❌ MISSING | Not yet implemented |
-| ADMIN | ❌ MISSING | Protected admin UI not yet implemented |
+| PLAYER RESEARCH | ✅ PASS | PlayerResearchView with game log, stats, trend indicators. Research button on BoardView |
+| JU AI EDGE | ✅ PASS | edge-analysis.ts: rule-based AI distinguishing statistics/observations/interpretation. No hallucination |
+| JU ROOMS | ✅ PASS | RoomsView: create/join/leave rooms, invite codes, members, room leaderboard. Migration + RLS + RPCs |
+| FRIEND CHALLENGES | ✅ PASS | ChallengesView: create/accept/decline, simulated opponents in demo, head-to-head results |
+| LEADERBOARDS | ✅ PASS | LeaderboardsView: global/weekly/monthly from settled entries. Migration with leaderboard views |
+| SOCIAL | 🔄 PARTIAL | Profiles via auth. Follows/activity/share not yet implemented |
+| NOTIFICATIONS | 🔄 PARTIAL | Migration: ju_notifications table + RLS + RPC. UI not yet implemented |
+| ADMIN | 🔄 PARTIAL | Migration: ju_audit_log + jp_admin_wallet_adjust RPC (admin-gated). UI not yet implemented |
 | FEATURE FLAGS | ✅ PASS | Centralized module. REAL_MONEY_ENABLED=false hard gate |
 | SECURITY | ✅ PARTIAL | RLS, fail-closed DB, service-role never in browser, dev-auth gate |
 | MOBILE UI | ✅ PASS | Mobile-first responsive layout, max-w-lg, bottom nav, safe areas |
-| UNIT TESTS | ✅ PASS | Existing: auth, entry-builder, settlement-engine, wallet-errors, persistence-boundaries |
+| UNIT TESTS | ✅ PASS | Existing: auth, entry-builder, settlement-engine, wallet-errors, persistence-boundaries. New: rooms-challenges-leaderboards |
 | INTEGRATION TESTS | ⏳ UNVERIFIED | db-integration.mjs + run-persistence-static.mjs exist, user must run locally |
 | E2E | ❌ MISSING | Not yet performed |
 | LINT | ⏳ UNVERIFIED | User must run `npm run lint` locally |
@@ -44,20 +44,25 @@
 | PUBLIC APP | ❌ NOT YET | Awaits merge to main + Pages enable |
 | REAL_MONEY_ENABLED | ✅ FALSE | Hard gate in feature-flags.ts |
 | CRITICAL ERRORS | 0 | — |
-| READY FOR USER TESTING | NO | Awaits local verification + deploy |
-| JU PICKS MVP COMPLETE | NO | Social features, research, AI, admin pending |
+| READY FOR USER TESTING | NO | Awaits local verification (lint/typecheck/build) + deploy |
+| JU PICKS MVP COMPLETE | NO | Social UI, notifications UI, admin UI, E2E test pending |
 
 ## Architecture
 
 ```
 src/
-  App.tsx                    — Shell: 5-tab nav, auth gate, lazy views
+  App.tsx                    — Shell: 5-tab nav, auth gate, lazy views, research overlay
   views/
-    BoardView.tsx            — Sport → game → props → Higher/Lower
+    BoardView.tsx            — Sport → game → props → Higher/Lower + Research button
     SlipView.tsx             — Entry builder + submit
     WalletView.tsx           — Balance, entries, ledger, demo settlement
     ProfileView.tsx          — Auth info, feature flags, free-to-play notice
+    PlayerResearchView.tsx   — Player research with game log + JU AI EDGE insights
+    RoomsView.tsx            — Create/join/leave rooms, invite codes, members, leaderboard
+    ChallengesView.tsx       — Friend challenges: create/accept/decline, simulated opponents
+    LeaderboardsView.tsx     — Global/weekly/monthly leaderboards from settled entries
   lib/
+    ai/edge-analysis.ts      — Rule-based AI analysis (stats/observations/interpretation)
     app/app-provider.tsx     — Single context: auth, wallet, entries, builder, demo store
     auth/dev-auth.ts          — Dev auth gate (existing)
     config/feature-flags.ts  — Centralized flags (REAL_MONEY_ENABLED=false)
@@ -76,6 +81,16 @@ supabase/migrations/
   001_foundation.sql         — Base tables (profiles, wallets, entries, etc.)
   002_jp_rpcs.sql            — 7 jp_* RPCs, settlement tables, RLS, grants
   003_persistence_hardening.sql — jp_set_session, indexes, comments
+  004_ju_social.sql          — ju_rooms, ju_challenges, ju_notifications, ju_audit_log
+                              + RLS + RPCs + leaderboard views
+
+tests/
+  auth-and-money.test.ts            — Dev auth gate + real money hard gate
+  entry-builder.test.ts             — Add/remove/validate/duplicate rejection
+  settlement-engine.test.ts         — HIGHER/LOWER/PUSH/VOID/Power/Flex
+  wallet-errors.test.ts             — Wallet error mapping
+  persistence-boundaries.test.ts    — Migration SQL contract + adapter fail-closed
+  rooms-challenges-leaderboards.test.ts — Rooms, challenges, leaderboards, notifications, admin auth
 
 .github/workflows/
   ci.yml                     — Postgres 16 CI: migrate + tests + lint + typecheck + build
