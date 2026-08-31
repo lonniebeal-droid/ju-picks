@@ -4,7 +4,11 @@
 
 import { useApp } from "~/lib/app/app-provider";
 
-export default function ProfileView() {
+interface ProfileViewProps {
+  onAdmin?: () => void;
+}
+
+export default function ProfileView({ onAdmin }: ProfileViewProps = {}) {
   const { user, isDemoMode, isDbConnected, signOut, flags } = useApp();
 
   return (
@@ -71,6 +75,17 @@ export default function ProfileView() {
           <FlagRow label="Notifications" value={flags.NOTIFICATIONS_ENABLED ? "Enabled" : "Disabled"} />
         </div>
       </div>
+
+      {/* Admin access */}
+      {onAdmin && flags?.ADMIN_ENABLED && (
+        <button
+          type="button"
+          onClick={onAdmin}
+          className="w-full rounded-xl border border-jp-border bg-jp-card py-3 text-sm font-medium text-jp-accent"
+        >
+          Admin Panel →
+        </button>
+      )}
 
       {/* DB status */}
       <div className="rounded-xl border border-jp-border bg-jp-card p-4">

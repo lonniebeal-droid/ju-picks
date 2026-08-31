@@ -15,8 +15,10 @@ const PlayerResearchView = lazy(() => import("~/views/PlayerResearchView"));
 const RoomsView = lazy(() => import("~/views/RoomsView"));
 const ChallengesView = lazy(() => import("~/views/ChallengesView"));
 const LeaderboardsView = lazy(() => import("~/views/LeaderboardsView"));
+const NotificationsView = lazy(() => import("~/views/NotificationsView"));
+const AdminView = lazy(() => import("~/views/AdminView"));
 
-type Tab = "board" | "slip" | "play" | "wallet" | "profile";
+type Tab = "board" | "slip" | "play" | "wallet" | "profile" | "admin";
 
 export function App() {
   return (
@@ -30,6 +32,7 @@ function AppContent() {
   const { user, isLoading, isDemoMode } = useApp();
   const [tab, setTab] = useState<Tab>("board");
   const [researchPlayerId, setResearchPlayerId] = useState<string | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   if (isLoading) {
     return (
@@ -49,14 +52,15 @@ function AppContent() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-jp-bg text-zinc-100">
-      <Header />
+      <Header onBellClick={() => setShowNotifications(true)} />
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-20">
         <Suspense fallback={<div className="text-sm text-jp-muted">Loading…</div>}>
           {tab === "board" && <BoardView onResearch={(id) => setResearchPlayerId(id)} />}
           {tab === "slip" && <SlipView />}
           {tab === "play" && <PlayView />}
           {tab === "wallet" && <WalletView />}
-          {tab === "profile" && <ProfileView />}
+          {tab === "profile" && <ProfileView onAdmin={() => setTab("admin")} />}
+          {tab === "admin" && <AdminView />}
         </Suspense>
       </main>
       <BottomNav tab={tab} setTab={setTab} />
@@ -70,11 +74,32 @@ function AppContent() {
           />
         </Suspense>
       )}
+
+      {/* Notifications overlay */}
+      {showNotifications && (
+        <div className="fixed inset-0 z-30 overflow-y-auto bg-jp-bg">
+          <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-jp-border bg-jp-bg/95 px-4 py-3 backdrop-blur">
+            <button
+              type="button"
+              onClick={() => setShowNotifications(false)}
+              className="rounded-lg bg-jp-card px-3 py-1.5 text-sm text-jp-muted"
+            >
+              ← Back
+            </button>
+            <h2 className="flex-1 text-sm font-medium">Notifications</h2>
+          </div>
+          <div className="px-4 py-4 pb-20">
+            <Suspense fallback={<div className="text-sm text-jp-muted">Loading…</div>}>
+              <NotificationsView />
+            </Suspense>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Header() {
+function Header({ onBellClick }: { onBellClick: () => void }) {
   const { balanceCredits, isDemoMode } = useApp();
   return (
     <header className="sticky top-0 z-10 border-b border-jp-border bg-jp-bg/95 px-4 py-3 backdrop-blur">
@@ -87,8 +112,18 @@ function Header() {
             </span>
           )}
         </h1>
-        <div className="rounded-full bg-jp-card px-3 py-1 text-sm font-medium text-jp-accent">
-          {balanceCredits.toLocaleString()} <span className="text-xs text-jp-muted">credits</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onBellClick}
+            className="relative rounded-full bg-jp-card p-2 text-jp-muted hover:text-zinc-100"
+            aria-label="Notifications"
+          >
+            🔔
+          </button>
+          <div className="rounded-full bg-jp-card px-3 py-1 text-sm font-medium text-jp-accent">
+            {balanceCredits.toLocaleString()} <span className="text-xs text-jp-muted">credits</span>
+          </div>
         </div>
       </div>
       <p className="mt-1 text-[11px] text-jp-muted">
@@ -99,7 +134,7 @@ function Header() {
 }
 
 function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  const { builderPicks } = useApp();
+  const { builderPicks, flags } = useApp();
   const tabs: Array<[Tab, string]> = [
     ["board", "Board"],
     ["slip", "Slip"],
@@ -107,6 +142,9 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
     ["wallet", "Wallet"],
     ["profile", "Profile"],
   ];
+  if (flags?.ADMIN_ENABLED) {
+    tabs.push(["admin", "Admin"]);
+  }
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-jp-border bg-jp-bg/95 backdrop-blur">
       <div className="mx-auto flex max-w-lg">
