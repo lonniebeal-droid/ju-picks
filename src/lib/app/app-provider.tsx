@@ -17,8 +17,8 @@ import {
 import { isSupabaseConfigured, supabaseSignUp, supabaseSignIn, supabaseSignOut, supabaseGetUser, supabaseRefresh, getStoredToken } from "../supabase/client";
 import { registerSupabaseDbClient } from "../supabase/db-adapter";
 import { isDbConfigured } from "../db/client";
-import { getFeatureFlags, getStartingCredits, isRealMoneyEnabled } from "../config/feature-flags";
-import { settlePick, summarizePickOutcomes, determinePowerOutcome } from "../settlement/engine";
+import { getFeatureFlags, getStartingCredits } from "../config/feature-flags";
+import { settlePick, summarizePickOutcomes, determinePowerOutcome, determineFlexOutcome } from "../settlement/engine";
 import type { PickOutcome } from "../settlement/types";
 
 // ─── Types ───────────────────────────────────────────────
@@ -513,7 +513,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     const summary = summarizePickOutcomes(updatedPicks.map((p) => p.outcome as PickOutcome));
-    const entryOutcome = determinePowerOutcome(summary, "FLEX");
+    const entryOutcome: string = entry.powerMode
+      ? determinePowerOutcome(summary)
+      : (determineFlexOutcome(summary) === "REQUIRES_CONFIG" ? "LOSS" : determineFlexOutcome(summary));
 
     let creditAmount = 0;
     let ledgerType = "";
