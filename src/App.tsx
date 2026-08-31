@@ -12,6 +12,9 @@ const SlipView = lazy(() => import("~/views/SlipView"));
 const WalletView = lazy(() => import("~/views/WalletView"));
 const ProfileView = lazy(() => import("~/views/ProfileView"));
 const PlayerResearchView = lazy(() => import("~/views/PlayerResearchView"));
+const RoomsView = lazy(() => import("~/views/RoomsView"));
+const ChallengesView = lazy(() => import("~/views/ChallengesView"));
+const LeaderboardsView = lazy(() => import("~/views/LeaderboardsView"));
 
 type Tab = "board" | "slip" | "play" | "wallet" | "profile";
 
@@ -218,38 +221,40 @@ function AuthRequired() {
 }
 
 function PlayView() {
+  const [subtab, setSubtab] = useState<"rooms" | "challenges" | "leaderboards">("rooms");
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-medium text-jp-muted">Play & Compete</h2>
-      <div className="space-y-3">
-        <div className="rounded-xl border border-jp-border bg-jp-card p-4">
-          <h3 className="font-medium text-zinc-100">JU Rooms</h3>
-          <p className="mt-1 text-xs text-jp-muted">
-            Create private rooms, invite friends, and compete on room leaderboards.
-          </p>
-          <div className="mt-3 rounded-lg bg-jp-bg px-3 py-2 text-xs text-jp-muted">
-            Coming soon — rooms require database configuration.
-          </div>
-        </div>
-        <div className="rounded-xl border border-jp-border bg-jp-card p-4">
-          <h3 className="font-medium text-zinc-100">Friend Challenges</h3>
-          <p className="mt-1 text-xs text-jp-muted">
-            Challenge a friend head-to-head with virtual credits.
-          </p>
-          <div className="mt-3 rounded-lg bg-jp-bg px-3 py-2 text-xs text-jp-muted">
-            Coming soon — challenges require database configuration.
-          </div>
-        </div>
-        <div className="rounded-xl border border-jp-border bg-jp-card p-4">
-          <h3 className="font-medium text-zinc-100">Leaderboards</h3>
-          <p className="mt-1 text-xs text-jp-muted">
-            Compete globally and weekly with other players.
-          </p>
-          <div className="mt-3 rounded-lg bg-jp-bg px-3 py-2 text-xs text-jp-muted">
-            Coming soon — leaderboards require settled entry data.
-          </div>
-        </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setSubtab("rooms")}
+          className={"flex-1 rounded-lg py-2 text-xs font-medium " +
+            (subtab === "rooms" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
+        >
+          Rooms
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubtab("challenges")}
+          className={"flex-1 rounded-lg py-2 text-xs font-medium " +
+            (subtab === "challenges" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
+        >
+          Challenges
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubtab("leaderboards")}
+          className={"flex-1 rounded-lg py-2 text-xs font-medium " +
+            (subtab === "leaderboards" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
+        >
+          Leaderboards
+        </button>
       </div>
+      <Suspense fallback={<div className="text-sm text-jp-muted">Loading…</div>}>
+        {subtab === "rooms" && <RoomsView />}
+        {subtab === "challenges" && <ChallengesView />}
+        {subtab === "leaderboards" && <LeaderboardsView />}
+      </Suspense>
     </div>
   );
 }
