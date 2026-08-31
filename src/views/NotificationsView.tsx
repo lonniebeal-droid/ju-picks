@@ -43,8 +43,8 @@ export function getUnreadCount(): number {
   return loadNotifications().filter((n) => !n.isRead).length;
 }
 
-export default function NotificationsView({ onClose }: { onClose?: () => void }) {
-  const { user, isDemoMode } = useApp();
+export default function NotificationsView() {
+  const { isDemoMode } = useApp();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {

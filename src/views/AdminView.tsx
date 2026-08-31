@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useApp } from "~/lib/app/app-provider";
 
 export default function AdminView() {
-  const { user, isDemoMode, isDbConnected, flags, entries, balanceCredits, ledger } = useApp();
+  const { isDemoMode, isDbConnected, flags, entries, balanceCredits, ledger } = useApp();
   const [showWalletAdjust, setShowWalletAdjust] = useState(false);
   const [adjustUserId, setAdjustUserId] = useState("");
   const [adjustAmount, setAdjustAmount] = useState(100);
