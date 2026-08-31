@@ -12,3 +12,12 @@ BEGIN
   END IF;
 END
 $outer$;
+
+-- service_role (Supabase server role) shim for bare Postgres / CI.
+DO $sr$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role NOLOGIN BYPASSRLS;
+  END IF;
+END
+$sr$;
