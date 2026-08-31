@@ -17,6 +17,7 @@ const ChallengesView = lazy(() => import("~/views/ChallengesView"));
 const LeaderboardsView = lazy(() => import("~/views/LeaderboardsView"));
 const NotificationsView = lazy(() => import("~/views/NotificationsView"));
 const AdminView = lazy(() => import("~/views/AdminView"));
+const SocialView = lazy(() => import("~/views/SocialView"));
 
 type Tab = "board" | "slip" | "play" | "wallet" | "profile" | "admin";
 
@@ -259,14 +260,14 @@ function AuthRequired() {
 }
 
 function PlayView() {
-  const [subtab, setSubtab] = useState<"rooms" | "challenges" | "leaderboards">("rooms");
+  const [subtab, setSubtab] = useState<"rooms" | "challenges" | "leaderboards" | "social">("rooms");
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
         <button
           type="button"
           onClick={() => setSubtab("rooms")}
-          className={"flex-1 rounded-lg py-2 text-xs font-medium " +
+          className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium " +
             (subtab === "rooms" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
         >
           Rooms
@@ -274,7 +275,7 @@ function PlayView() {
         <button
           type="button"
           onClick={() => setSubtab("challenges")}
-          className={"flex-1 rounded-lg py-2 text-xs font-medium " +
+          className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium " +
             (subtab === "challenges" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
         >
           Challenges
@@ -282,16 +283,25 @@ function PlayView() {
         <button
           type="button"
           onClick={() => setSubtab("leaderboards")}
-          className={"flex-1 rounded-lg py-2 text-xs font-medium " +
+          className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium " +
             (subtab === "leaderboards" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
         >
           Leaderboards
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubtab("social")}
+          className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium " +
+            (subtab === "social" ? "bg-jp-accent text-black" : "bg-jp-card text-jp-muted")}
+        >
+          Social
         </button>
       </div>
       <Suspense fallback={<div className="text-sm text-jp-muted">Loading…</div>}>
         {subtab === "rooms" && <RoomsView />}
         {subtab === "challenges" && <ChallengesView />}
         {subtab === "leaderboards" && <LeaderboardsView />}
+        {subtab === "social" && <SocialView />}
       </Suspense>
     </div>
   );
