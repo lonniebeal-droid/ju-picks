@@ -11,6 +11,7 @@ const BoardView = lazy(() => import("~/views/BoardView"));
 const SlipView = lazy(() => import("~/views/SlipView"));
 const WalletView = lazy(() => import("~/views/WalletView"));
 const ProfileView = lazy(() => import("~/views/ProfileView"));
+const PlayerResearchView = lazy(() => import("~/views/PlayerResearchView"));
 
 type Tab = "board" | "slip" | "play" | "wallet" | "profile";
 
@@ -25,6 +26,7 @@ export function App() {
 function AppContent() {
   const { user, isLoading, isDemoMode } = useApp();
   const [tab, setTab] = useState<Tab>("board");
+  const [researchPlayerId, setResearchPlayerId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -47,7 +49,7 @@ function AppContent() {
       <Header />
       <main className="flex-1 overflow-y-auto px-4 py-4 pb-20">
         <Suspense fallback={<div className="text-sm text-jp-muted">Loading…</div>}>
-          {tab === "board" && <BoardView />}
+          {tab === "board" && <BoardView onResearch={(id) => setResearchPlayerId(id)} />}
           {tab === "slip" && <SlipView />}
           {tab === "play" && <PlayView />}
           {tab === "wallet" && <WalletView />}
@@ -55,6 +57,16 @@ function AppContent() {
         </Suspense>
       </main>
       <BottomNav tab={tab} setTab={setTab} />
+
+      {/* Player research overlay */}
+      {researchPlayerId && (
+        <Suspense fallback={<div className="text-sm text-jp-muted">Loading…</div>}>
+          <PlayerResearchView
+            playerId={researchPlayerId}
+            onClose={() => setResearchPlayerId(null)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -7,7 +7,11 @@ import { useApp } from "~/lib/app/app-provider";
 import { getSportsProvider } from "~/lib/sports/provider-registry";
 import type { Sport, Game, PlayerProp, Player, Team } from "~/lib/sports/types";
 
-export default function BoardView() {
+interface BoardViewProps {
+  onResearch?: (playerId: string) => void;
+}
+
+export default function BoardView({ onResearch }: BoardViewProps = {}) {
   const { addBuilderPick, builderPicks } = useApp();
   const [sports, setSports] = useState<Sport[]>([]);
   const [selectedSport, setSelectedSport] = useState<string | null>(null);
@@ -243,6 +247,15 @@ export default function BoardView() {
                   <p className="mt-2 text-center text-[10px] text-jp-accent">
                     Added to slip
                   </p>
+                )}
+                {onResearch && (
+                  <button
+                    type="button"
+                    onClick={() => onResearch(prop.playerId)}
+                    className="mt-2 w-full rounded-lg bg-jp-bg py-1.5 text-xs font-medium text-jp-accent hover:bg-jp-accent/10"
+                  >
+                    🔍 Research {playerName.split(" ").pop()}
+                  </button>
                 )}
               </div>
             );
