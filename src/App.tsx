@@ -4,7 +4,7 @@
  * REAL_MONEY_ENABLED=false.
  */
 
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, type FormEvent } from "react";
 import { AppProvider, useApp } from "~/lib/app/app-provider";
 
 const BoardView = lazy(() => import("~/views/BoardView"));
@@ -124,7 +124,7 @@ function AuthRequired() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
