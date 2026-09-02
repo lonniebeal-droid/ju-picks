@@ -74,7 +74,7 @@ export default function SocialView() {
     text: e.status === "settled"
       ? `${e.outcome === "WIN" ? "Won" : e.outcome === "LOSS" ? "Lost" : "Pushed"} entry with ${e.picks.length} pick${e.picks.length > 1 ? "s" : ""}`
       : `Submitted ${e.picks.length}-pick ${e.mode} entry for ${Math.floor(e.entryAmountCents / 100)} cr`,
-    timestamp: (e as Record<string, unknown>).createdAt as string | undefined,
+    timestamp: (e as unknown as Record<string, unknown>).createdAt as string | undefined,
   }));
 
   function activityIcon(type: string): string {
