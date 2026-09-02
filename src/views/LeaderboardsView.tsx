@@ -43,13 +43,13 @@ export default function LeaderboardsView() {
     if (scope === "weekly") {
       const weekStart = Date.now() - 7 * 24 * 60 * 60 * 1000;
       filtered = settled.filter((e) => {
-        const ts = (e as Record<string, unknown>).createdAt;
+        const ts = (e as unknown as Record<string, unknown>).createdAt;
         return typeof ts === "string" ? new Date(ts).getTime() >= weekStart : true;
       });
     } else if (scope === "monthly") {
       const monthStart = Date.now() - 30 * 24 * 60 * 60 * 1000;
       filtered = settled.filter((e) => {
-        const ts = (e as Record<string, unknown>).createdAt;
+        const ts = (e as unknown as Record<string, unknown>).createdAt;
         return typeof ts === "string" ? new Date(ts).getTime() >= monthStart : true;
       });
     }
