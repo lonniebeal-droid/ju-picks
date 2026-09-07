@@ -95,7 +95,8 @@ BEGIN
     RAISE EXCEPTION 'Room not found or invalid invite code';
   END IF;
   IF r.is_private AND r.owner_id <> auth.uid() THEN
-    -- Only owner can see private rooms via code; allow join
+    -- Private-room access is controlled by possession of the invite code.
+    NULL;
   END IF;
   INSERT INTO public.ju_room_members (room_id, user_id, role)
   VALUES (r.id, auth.uid(), 'member')
@@ -284,12 +285,12 @@ CREATE TABLE IF NOT EXISTS public.ju_audit_log (
 
 ALTER TABLE public.ju_audit_log ENABLE ROW LEVEL SECURITY;
 
--- Only admins can read audit log (admin check via profiles.is_admin)
+-- Foundation schema stores admin authority in profiles.role.
 CREATE POLICY ju_audit_select ON public.ju_audit_log FOR SELECT TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND is_admin = true
+      WHERE user_id = auth.uid() AND role IN ('admin', 'superadmin')
     )
   );
 
@@ -297,7 +298,7 @@ CREATE POLICY ju_audit_insert ON public.ju_audit_log FOR INSERT TO authenticated
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND is_admin = true
+      WHERE user_id = auth.uid() AND role IN ('admin', 'superadmin')
     )
   );
 
@@ -307,18 +308,48 @@ CREATE OR REPLACE FUNCTION public.jp_admin_wallet_adjust(
   p_amount_cents bigint,
   p_reason text
 ) RETURNS void AS $$
-DECLARE is_admin boolean;
+DECLARE
+  v_is_admin boolean;
+  v_wallet_id uuid;
+  v_balance bigint;
 BEGIN
-  SELECT is_admin INTO is_admin FROM public.profiles WHERE id = auth.uid();
-  IF NOT is_admin THEN
+  SELECT (role IN ('admin', 'superadmin'))
+    INTO v_is_admin
+  FROM public.profiles
+  WHERE user_id = auth.uid();
+
+  IF COALESCE(v_is_admin, false) = false THEN
     RAISE EXCEPTION 'Not authorized: admin only';
   END IF;
   IF p_amount_cents = 0 THEN
     RAISE EXCEPTION 'Adjustment amount must be non-zero';
   END IF;
+
+  SELECT wallet_id, balance_cents
+    INTO v_wallet_id, v_balance
+  FROM public.wallets
+  WHERE user_id = p_user_id AND wallet_kind = 'play'
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Wallet not found';
+  END IF;
+
+  IF v_balance + p_amount_cents < 0 THEN
+    RAISE EXCEPTION 'Adjustment would make balance negative';
+  END IF;
+
+  v_balance := v_balance + p_amount_cents;
+
+  UPDATE public.wallets
+  SET balance_cents = v_balance, updated_at = now()
+  WHERE wallet_id = v_wallet_id;
+
   INSERT INTO public.wallet_transactions
-    (user_id, type, amount_cents, reason, created_at)
-  VALUES (p_user_id, 'ADMIN_ADJUSTMENT', p_amount_cents, p_reason, now());
+    (wallet_id, user_id, type, amount_cents, balance_after_cents, reason, created_at)
+  VALUES
+    (v_wallet_id, p_user_id, 'ADMIN_ADJUSTMENT', p_amount_cents, v_balance, p_reason, now());
+
   INSERT INTO public.ju_audit_log (admin_id, action, target_type, target_id, details)
   VALUES (auth.uid(), 'WALLET_ADJUST', 'user', p_user_id::text,
     jsonb_build_object('amount_cents', p_amount_cents, 'reason', p_reason));
@@ -329,43 +360,43 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- LEADERBOARDS
 -- ═══════════════════════════════════════════════════════════════
 
--- View: Global leaderboard calculated from settled entries
+-- Settlement facts live in settlement_runs, not entries.
 CREATE OR REPLACE VIEW public.ju_leaderboard_global AS
 SELECT
   e.user_id,
   COUNT(*) AS total_entries,
-  COUNT(*) FILTER (WHERE e.outcome = 'WIN') AS wins,
-  COUNT(*) FILTER (WHERE e.outcome = 'LOSS') AS losses,
-  COUNT(*) FILTER (WHERE e.outcome = 'PUSH') AS pushes,
-  COALESCE(SUM(e.reward_credits_cents), 0) AS total_profit_cents
+  COUNT(*) FILTER (WHERE sr.outcome = 'WIN') AS wins,
+  COUNT(*) FILTER (WHERE sr.outcome = 'LOSS') AS losses,
+  COUNT(*) FILTER (WHERE sr.outcome = 'PUSH') AS pushes,
+  COALESCE(SUM(sr.reward_credits_cents - e.entry_amount_cents), 0) AS total_profit_cents
 FROM public.entries e
-WHERE e.status = 'settled'
+JOIN public.settlement_runs sr ON sr.entry_id = e.entry_id
 GROUP BY e.user_id
 ORDER BY total_profit_cents DESC;
 
--- View: Weekly leaderboard
 CREATE OR REPLACE VIEW public.ju_leaderboard_weekly AS
 SELECT
   e.user_id,
   COUNT(*) AS total_entries,
-  COUNT(*) FILTER (WHERE e.outcome = 'WIN') AS wins,
-  COALESCE(SUM(e.reward_credits_cents), 0) AS total_profit_cents
+  COUNT(*) FILTER (WHERE sr.outcome = 'WIN') AS wins,
+  COUNT(*) FILTER (WHERE sr.outcome = 'LOSS') AS losses,
+  COALESCE(SUM(sr.reward_credits_cents - e.entry_amount_cents), 0) AS total_profit_cents
 FROM public.entries e
-WHERE e.status = 'settled'
-  AND e.settled_at >= date_trunc('week', now())
+JOIN public.settlement_runs sr ON sr.entry_id = e.entry_id
+WHERE sr.created_at >= date_trunc('week', now())
 GROUP BY e.user_id
 ORDER BY total_profit_cents DESC;
 
--- View: Monthly leaderboard
 CREATE OR REPLACE VIEW public.ju_leaderboard_monthly AS
 SELECT
   e.user_id,
   COUNT(*) AS total_entries,
-  COUNT(*) FILTER (WHERE e.outcome = 'WIN') AS wins,
-  COALESCE(SUM(e.reward_credits_cents), 0) AS total_profit_cents
+  COUNT(*) FILTER (WHERE sr.outcome = 'WIN') AS wins,
+  COUNT(*) FILTER (WHERE sr.outcome = 'LOSS') AS losses,
+  COALESCE(SUM(sr.reward_credits_cents - e.entry_amount_cents), 0) AS total_profit_cents
 FROM public.entries e
-WHERE e.status = 'settled'
-  AND e.settled_at >= date_trunc('month', now())
+JOIN public.settlement_runs sr ON sr.entry_id = e.entry_id
+WHERE sr.created_at >= date_trunc('month', now())
 GROUP BY e.user_id
 ORDER BY total_profit_cents DESC;
 
@@ -383,14 +414,19 @@ CREATE OR REPLACE FUNCTION public.jp_get_leaderboard(
 BEGIN
   IF p_scope = 'weekly' THEN
     RETURN QUERY
-    SELECT * FROM public.ju_leaderboard_weekly LIMIT p_limit;
+    SELECT l.user_id, l.total_entries, l.wins, l.losses, l.total_profit_cents
+    FROM public.ju_leaderboard_weekly l
+    LIMIT p_limit;
   ELSIF p_scope = 'monthly' THEN
     RETURN QUERY
-    SELECT * FROM public.ju_leaderboard_monthly LIMIT p_limit;
+    SELECT l.user_id, l.total_entries, l.wins, l.losses, l.total_profit_cents
+    FROM public.ju_leaderboard_monthly l
+    LIMIT p_limit;
   ELSE
     RETURN QUERY
-    SELECT user_id, total_entries, wins, losses, total_profit_cents
-    FROM public.ju_leaderboard_global LIMIT p_limit;
+    SELECT l.user_id, l.total_entries, l.wins, l.losses, l.total_profit_cents
+    FROM public.ju_leaderboard_global l
+    LIMIT p_limit;
   END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -417,8 +453,3 @@ GRANT SELECT ON public.ju_leaderboard_monthly TO authenticated;
 GRANT ALL ON public.ju_challenges TO service_role;
 GRANT ALL ON public.ju_audit_log TO service_role;
 GRANT ALL ON public.ju_notifications TO service_role;
-
-COMMENT ON TABLE public.ju_rooms IS 'JU PICKS private/social rooms. Virtual credits only.';
-COMMENT ON TABLE public.ju_challenges IS 'JU PICKS friend challenges. Virtual credits only.';
-COMMENT ON TABLE public.ju_notifications IS 'JU PICKS user notifications.';
-COMMENT ON TABLE public.ju_audit_log IS 'JU PICKS admin audit records. Admin-only access.';
