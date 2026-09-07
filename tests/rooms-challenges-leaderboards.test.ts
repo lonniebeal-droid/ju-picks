@@ -5,7 +5,7 @@
  * and leaderboard calculation. Uses localStorage mocking.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 
 // ─── Room storage logic ─────────────────────────────────────────
 
