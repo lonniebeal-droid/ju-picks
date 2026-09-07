@@ -269,7 +269,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     init();
     return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── Demo state refresh ─────────────────────────────────
   function refreshDemoState() {
