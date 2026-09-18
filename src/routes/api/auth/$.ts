@@ -2,41 +2,71 @@
 // Auth endpoint for Better Auth integration
 // Preserves Batch 3 Better Auth implementation
 
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession, signIn, signOut } from '../../../../lib/auth/dev-auth';
 
-export async function GET(request) {
+interface Session {
+  userId: string;
+  email?: string;
+  role?: string;
+}
+
+interface AuthResponse {
+  authenticated: boolean;
+  user?: {
+    id: string;
+    email?: string;
+    role?: string;
+  };
+  error?: string;
+}
+
+interface SignInRequest {
+  action: string;
+  email?: string;
+  password?: string;
+  provider?: string;
+}
+
+/**
+ * GET /api/auth - Check authentication status
+ */
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession() as Session | null;
     
     if (!session) {
-      return new Response(JSON.stringify({ authenticated: false }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return NextResponse.json(
+        { authenticated: false } as AuthResponse,
+        { status: 401 }
+      );
     }
     
-    return new Response(JSON.stringify({
-      authenticated: true,
-      user: {
-        id: session.userId,
-        email: session.email,
-        role: session.role,
-      },
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json(
+      {
+        authenticated: true,
+        user: {
+          id: session.userId,
+          email: session.email,
+          role: session.role,
+        },
+      } as AuthResponse,
+      { status: 200 }
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Auth check failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json(
+      { error: 'Auth check failed' } as AuthResponse,
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(request) {
+/**
+ * POST /api/auth - Handle authentication actions
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
+    const body: SignInRequest = await request.json();
     const action = body.action;
     const email = body.email;
     const password = body.password;
@@ -44,36 +74,42 @@ export async function POST(request) {
     
     switch (action) {
       case 'signIn':
-        if (provider === 'email') {
+        if (provider === 'email' && email && password) {
           const result = await signIn('email', { email, password });
           if (!result.success) {
-            return new Response(JSON.stringify({ success: false, error: result.error }), {
-              status: 401,
-              headers: { 'Content-Type': 'application/json' },
-            });
+            return NextResponse.json(
+              { success: false, error: result.error } as AuthResponse,
+              { status: 401 }
+            );
           }
-          return new Response(JSON.stringify({ success: true }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          });
+          return NextResponse.json(
+            { success: true } as AuthResponse,
+            { status: 200 }
+          );
         }
         break;
       case 'signOut':
         await signOut();
-        return new Response(JSON.stringify({ success: true }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return NextResponse.json(
+          { success: true } as AuthResponse,
+          { status: 200 }
+        );
       default:
-        return new Response(JSON.stringify({ error: 'Invalid action' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return NextResponse.json(
+          { error: 'Invalid action' } as AuthResponse,
+          { status: 400 }
+        );
     }
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Auth failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json(
+      { error: 'Auth failed' } as AuthResponse,
+      { status: 500 }
+    );
   }
+  
+  // Default response if no action matched
+  return NextResponse.json(
+    { error: 'No action specified' } as AuthResponse,
+    { status: 400 }
+  );
 }
