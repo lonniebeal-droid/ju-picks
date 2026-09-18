@@ -2,17 +2,19 @@
 // Auth endpoint for Better Auth integration
 // Preserves Batch 3 Better Auth implementation
 
-import { getServerSession, signIn, signOut } from '../../../lib/auth/dev-auth';
+import { getServerSession, signIn, signOut } from '../../../../lib/auth/dev-auth';
 
 export async function GET(request) {
   try {
     const session = await getServerSession();
+    
     if (!session) {
       return new Response(JSON.stringify({ authenticated: false }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    
     return new Response(JSON.stringify({
       authenticated: true,
       user: {
