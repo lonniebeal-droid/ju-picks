@@ -4,12 +4,47 @@
 
 import { getServerSession } from '../../auth/dev-auth';
 
+interface SportsBoard {
+  sports: Array<{ id: string; name: string; events: any[] }>;
+  lastUpdated: string;
+  locked: boolean;
+}
+
+interface SportBoard {
+  sportId: string;
+  name: string;
+  events: any[];
+  lastUpdated: string;
+  locked: boolean;
+}
+
+interface EventBoard {
+  sportId: string;
+  eventId: string;
+  name: string;
+  startTime: string;
+  players: any[];
+  lastUpdated: string;
+  locked: boolean;
+}
+
+interface PlayerBoard {
+  sportId: string;
+  eventId: string;
+  playerId: string;
+  name: string;
+  position: string;
+  team: string;
+  stats: Record<string, any>;
+  lastUpdated: string;
+}
+
 /**
  * Get the main sports board with all active sports
  * Board locking is UX only - DB remains authoritative
  */
-export async function getSportsBoard() {
-  const session = await getServerSession();
+export async function getSportsBoard(): Promise<SportsBoard> {
+  const session = await getServerSession() as { userId: string };
   if (!session || !session.userId) {
     throw new Error('Unauthorized: No active session');
   }
@@ -29,8 +64,8 @@ export async function getSportsBoard() {
 /**
  * Get a specific sport board
  */
-export async function getSportBoard(sportId) {
-  const session = await getServerSession();
+export async function getSportBoard(sportId: string): Promise<SportBoard> {
+  const session = await getServerSession() as { userId: string };
   if (!session || !session.userId) {
     throw new Error('Unauthorized: No active session');
   }
@@ -52,8 +87,8 @@ export async function getSportBoard(sportId) {
 /**
  * Get a specific event board
  */
-export async function getEventBoard(sportId, eventId) {
-  const session = await getServerSession();
+export async function getEventBoard(sportId: string, eventId: string): Promise<EventBoard> {
+  const session = await getServerSession() as { userId: string };
   if (!session || !session.userId) {
     throw new Error('Unauthorized: No active session');
   }
@@ -63,7 +98,10 @@ export async function getEventBoard(sportId, eventId) {
     throw new Error('Invalid sport ID');
   }
   
-  if (!/^[a-f0-9-]{36}$|^\d+$/.test(eventId)) {
+  // Event ID should be a valid UUID or numeric ID
+  const uuidPattern = /^[a-f0-9-]{36}$/;
+  const numericPattern = /^\d+$/;
+  if (!uuidPattern.test(eventId) && !numericPattern.test(eventId)) {
     throw new Error('Invalid event ID');
   }
   
@@ -81,8 +119,8 @@ export async function getEventBoard(sportId, eventId) {
 /**
  * Get a specific player board
  */
-export async function getPlayerBoard(sportId, eventId, playerId) {
-  const session = await getServerSession();
+export async function getPlayerBoard(sportId: string, eventId: string, playerId: string): Promise<PlayerBoard> {
+  const session = await getServerSession() as { userId: string };
   if (!session || !session.userId) {
     throw new Error('Unauthorized: No active session');
   }
@@ -92,11 +130,14 @@ export async function getPlayerBoard(sportId, eventId, playerId) {
     throw new Error('Invalid sport ID');
   }
   
-  if (!/^[a-f0-9-]{36}$|^\d+$/.test(eventId)) {
+  const uuidPattern = /^[a-f0-9-]{36}$/;
+  const numericPattern = /^\d+$/;
+  
+  if (!uuidPattern.test(eventId) && !numericPattern.test(eventId)) {
     throw new Error('Invalid event ID');
   }
   
-  if (!/^[a-f0-9-]{36}$|^\d+$/.test(playerId)) {
+  if (!uuidPattern.test(playerId) && !numericPattern.test(playerId)) {
     throw new Error('Invalid player ID');
   }
   
@@ -113,8 +154,8 @@ export async function getPlayerBoard(sportId, eventId, playerId) {
 }
 
 /**
- * Refresh board data (UX only)
+ * Refresh board data (UX only - actual data comes from DB)
  */
-export async function refreshBoardData() {
+export async function refreshBoardData(): Promise<{ refreshed: boolean; timestamp: string }> {
   return { refreshed: true, timestamp: new Date().toISOString() };
 }
