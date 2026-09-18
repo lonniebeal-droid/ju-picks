@@ -2,33 +2,49 @@
 // Login page with Better Auth integration
 // REAL_MONEY_ENABLED=false
 
-import { useState } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import { signIn } from '../../lib/auth/dev-auth';
 import { REAL_MONEY_ENABLED } from '../../lib/jupicks/actions';
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+interface SignInResult {
+  success: boolean;
+  error?: string;
+}
 
-  const handleSubmit = async (e) => {
+export default function LoginPage() {
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const result = await signIn('email', { email, password });
+      const result = await signIn('email', { email, password }) as SignInResult;
+      
       if (!result.success) {
         setError(result.error || 'Sign in failed');
         return;
       }
+      
+      // Redirect to home after successful login
       window.location.href = '/';
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  };
+
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
   };
 
   return (
@@ -57,12 +73,13 @@ export default function LoginPage() {
               type="email"
               id="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               className="w-full p-3 rounded bg-gray-700 border border-gray-600 focus:border-blue-500 focus:outline-none"
               required
               autoComplete="email"
             />
           </div>
+          
           <div>
             <label htmlFor="password" className="block text-sm font-medium mb-1">
               Password
@@ -71,12 +88,13 @@ export default function LoginPage() {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               className="w-full p-3 rounded bg-gray-700 border border-gray-600 focus:border-blue-500 focus:outline-none"
               required
               autoComplete="current-password"
             />
           </div>
+          
           <button
             type="submit"
             disabled={loading}
@@ -85,6 +103,7 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+        
         <p className="text-center text-sm text-gray-400 mt-6">
           New here? Contact admin to create an account
         </p>
