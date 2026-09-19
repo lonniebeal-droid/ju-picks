@@ -35,11 +35,6 @@ jobs:
           NODE_ENV: production
           REAL_MONEY_ENABLED: "false"
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
