@@ -4,7 +4,7 @@
 
 import { supabaseGetUser } from '../supabase/client';
 import { getSportsProvider } from '../sports/provider-registry';
-import type { Game, Player, PlayerProp, Sport, Team } from '../sports/types';
+import type { Player, PlayerProp, Team } from '../sports/types';
 
 interface SportsBoard {
   sports: Array<{ id: string; name: string; code: string; events: BoardEventSummary[] }>;
@@ -129,15 +129,10 @@ export async function getSportsBoard(): Promise<SportsBoard> {
     }
   }
 
-  const leagueToSport = new Map<string, Sport>();
-  // Leagues are keyed under sport; for demo we map by code prefix in leagueId
-  const sportByCode = new Map(sports.map((s) => [s.code, s]));
-
   const boardSports = sports.map((sport) => {
-    const sportGames = games.filter((g) => {
-      // leagueId like "l-nfl-25" contains sport code lowercased
-      return g.leagueId.toLowerCase().includes(sport.code.toLowerCase());
-    });
+    const sportGames = games.filter((g) =>
+      g.leagueId.toLowerCase().includes(sport.code.toLowerCase()),
+    );
     return {
       id: sport.id,
       name: sport.name,
