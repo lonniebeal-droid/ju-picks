@@ -2,7 +2,7 @@
 // Board data composition and retrieval
 // Uses real Batch 3 queries, board locking is UX only
 
-import { getServerSession } from '../../auth/dev-auth';
+import { supabaseGetUser } from '../supabase/client';
 
 interface SportsBoard {
   sports: Array<{ id: string; name: string; events: any[] }>;
@@ -44,8 +44,8 @@ interface PlayerBoard {
  * Board locking is UX only - DB remains authoritative
  */
 export async function getSportsBoard(): Promise<SportsBoard> {
-  const session = await getServerSession() as { userId: string };
-  if (!session || !session.userId) {
+  const user = await supabaseGetUser();
+  if (!user?.id) {
     throw new Error('Unauthorized: No active session');
   }
   
@@ -65,8 +65,8 @@ export async function getSportsBoard(): Promise<SportsBoard> {
  * Get a specific sport board
  */
 export async function getSportBoard(sportId: string): Promise<SportBoard> {
-  const session = await getServerSession() as { userId: string };
-  if (!session || !session.userId) {
+  const user = await supabaseGetUser();
+  if (!user?.id) {
     throw new Error('Unauthorized: No active session');
   }
   
@@ -88,8 +88,8 @@ export async function getSportBoard(sportId: string): Promise<SportBoard> {
  * Get a specific event board
  */
 export async function getEventBoard(sportId: string, eventId: string): Promise<EventBoard> {
-  const session = await getServerSession() as { userId: string };
-  if (!session || !session.userId) {
+  const user = await supabaseGetUser();
+  if (!user?.id) {
     throw new Error('Unauthorized: No active session');
   }
   
@@ -120,8 +120,8 @@ export async function getEventBoard(sportId: string, eventId: string): Promise<E
  * Get a specific player board
  */
 export async function getPlayerBoard(sportId: string, eventId: string, playerId: string): Promise<PlayerBoard> {
-  const session = await getServerSession() as { userId: string };
-  if (!session || !session.userId) {
+  const user = await supabaseGetUser();
+  if (!user?.id) {
     throw new Error('Unauthorized: No active session');
   }
   
