@@ -104,6 +104,10 @@ function playerLookup(players: Player[]): Map<string, Player> {
   return new Map(players.map((p) => [p.id, p]));
 }
 
+function str(value: string | null | undefined): string {
+  return value ?? '';
+}
+
 /**
  * Get the main sports board with all active sports and open events.
  * Uses real Batch 3 StaticDemoProvider (or configured provider).
@@ -203,7 +207,7 @@ export async function getSportBoard(sportIdOrCode: string): Promise<SportBoard> 
           id: p.id,
           playerId: p.playerId,
           playerName: pl?.name ?? p.playerId,
-          position: pl?.position ?? '',
+          position: str(pl?.position),
           statType: p.statType,
           line: p.line,
           higherAvailable: p.higherAvailable,
@@ -277,8 +281,8 @@ export async function getEventBoard(sportIdOrCode: string, eventId: string): Pro
     playerRows.push({
       playerId,
       name: pl?.name ?? playerId,
-      position: pl?.position ?? '',
-      teamId: pl?.teamId ?? '',
+      position: str(pl?.position),
+      teamId: str(pl?.teamId),
       props: plist.map((p) => ({
         id: p.id,
         statType: p.statType,
@@ -337,7 +341,8 @@ export async function getPlayerBoard(
     throw new Error('Player not found');
   }
 
-  const team = teamsRes.data.find((t) => t.id === player.teamId);
+  const teamId = str(player.teamId);
+  const team = teamsRes.data.find((t) => t.id === teamId);
   const openProps = propsRes.data
     .filter((p) => p.status === 'open')
     .map((p) => ({
@@ -353,9 +358,9 @@ export async function getPlayerBoard(
     eventId,
     playerId,
     name: player.name,
-    position: player.position,
-    team: team ? `${team.city} ${team.name}` : player.teamId,
-    teamId: player.teamId,
+    position: str(player.position),
+    team: team ? `${team.city} ${team.name}` : teamId,
+    teamId,
     stats: statsRes.data.map((s) => ({
       gameId: s.gameId,
       statType: s.statType,

@@ -46,7 +46,9 @@ describe("board provider composition (StaticDemoProvider)", () => {
 
     const teamIds = new Set(teams.data.map((t) => t.id));
     for (const p of players.data) {
-      expect(teamIds.has(p.teamId)).toBe(true);
+      if (p.teamId) {
+        expect(teamIds.has(p.teamId)).toBe(true);
+      }
     }
   });
 
@@ -54,8 +56,8 @@ describe("board provider composition (StaticDemoProvider)", () => {
     const players = await provider.getPlayers();
     const sample = players.data[0];
     expect(sample).toBeDefined();
+    expect(typeof sample.id).toBe("string");
     const stats = await provider.getPlayerStats({ playerId: sample.id });
-    // Demo data has stats for several players; at least the set is well-formed
     for (const s of stats.data) {
       expect(s.playerId).toBeTruthy();
       expect(typeof s.value).toBe("number");
@@ -67,7 +69,7 @@ describe("board provider composition (StaticDemoProvider)", () => {
     const games = await provider.getGames({ status: "scheduled" });
     const gameId = games.data[0]?.id;
     expect(gameId).toBeTruthy();
-    const props = await provider.getPlayerProps({ gameId });
+    const props = await provider.getPlayerProps({ gameId: gameId as string });
     expect(props.data.every((p) => p.gameId === gameId)).toBe(true);
     expect(props.data.length).toBeGreaterThan(0);
   });
