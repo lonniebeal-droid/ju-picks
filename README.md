@@ -1,43 +1,15 @@
 # JU PICKS
 
-Free-to-play sports prediction platform. **Virtual credits only.**
+Free-to-play sports prediction platform (virtual credits only). REAL_MONEY_ENABLED=false.
 
-- No deposits
-- No withdrawals
-- No cash wagering
-- No real-money prizes
-- `REAL_MONEY_ENABLED=false`
+## GitHub Pages
 
-## Stack
+GitHub Pages deployment is configured via the deploy.yml workflow. The site will be available at: https://lonniebeal-droid.github.io/ju-picks/
 
-- React 19 + TypeScript + Vite
-- Tailwind CSS
-- Zod validation
-- Vitest
-- Supabase PostgreSQL (migrations under `supabase/migrations`)
+## Development
 
-## Quick start
+See DEPLOYMENT_STATUS.md for current deployment status.
 
-```bash
-cp .env.example .env
-npm install
-npm run typecheck
-npm test
-npm run build
-npm run dev
-```
+---
 
-## Offline tests
-
-```bash
-npm run test:pure
-npm run test:static
-```
-
-## CI
-
-GitHub Actions runs Postgres service, migrations, integration tests, lint, typecheck, unit tests, and build.
-
-## Status
-
-See [BUILD_STATUS.md](./BUILD_STATUS.md).
+*Last updated: 2026-09-21 by JU Production Completion Worker*
