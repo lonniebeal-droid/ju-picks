@@ -19,7 +19,7 @@ import {
   getSportBoard,
   getEventBoard,
   getPlayerBoard,
-} from "../../lib/jupicks/server-fns";
+} from "../../../lib/jupicks/server-fns";
 
 export const REAL_MONEY_ENABLED = false as const;
 
