@@ -4,7 +4,7 @@
  * REAL_MONEY_ENABLED=false - Virtual credits only, no cash value.
  */
 
-// Re-export all auth endpoints
+// Re-export all auth endpoints (no .ts extension — bundler/ts moduleResolution)
 export {
   handleGetAuth,
   handleGetBalance,
@@ -17,5 +17,5 @@ export {
   handleGetSportBoard,
   handleGetEventBoard,
   handleGetPlayerBoard,
-  REAL_MONEY_ENABLED
-} from './auth/$.ts';
+  REAL_MONEY_ENABLED,
+} from "./auth/$";

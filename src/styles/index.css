@@ -10,5 +10,37 @@ body,
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #0b3d2c55, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #1a140855, transparent 50%),
+    #07080c;
+  color: #f4f6fb;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium sports product surfaces */
+@layer components {
+  .jp-shell {
+    @apply min-h-screen text-jp-text;
+  }
+  .jp-card {
+    @apply bg-jp-card border border-jp-border rounded-jp shadow-jp-card;
+  }
+  .jp-chip {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold border border-jp-border bg-jp-elevated text-jp-muted;
+  }
+  .jp-btn-primary {
+    @apply rounded-xl px-4 py-2.5 font-bold text-black bg-gradient-to-b from-[#5dffd0] to-jp-accent shadow-jp-glow;
+  }
+  .jp-btn-secondary {
+    @apply rounded-xl px-4 py-2.5 font-semibold border border-jp-border bg-jp-elevated text-jp-text;
+  }
+}
+
+/* Mobile-friendly tap targets */
+button,
+[role="button"],
+a {
+  touch-action: manipulation;
 }
