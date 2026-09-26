@@ -6,7 +6,7 @@
 
 import { supabaseGetUser } from '../supabase/client';
 import { jpGetVirtualBalance, jpGetLedger, jpPlaceEntry, jpRefundEntry, jpGetMyEntries, jpGetMyEntry } from '../db/jp-rpc';
-import type { Entry, LedgerEntry, Wallet } from '../types';
+import type { Entry, LedgerEntry } from '../types';
 
 export const REAL_MONEY_ENABLED = false as const;
 
@@ -90,21 +90,21 @@ export async function getMyEntry(entryId: string): Promise<Entry | null> {
 }
 
 export async function getSportsBoard() {
-  const user = await requireServerUser();
+  await requireServerUser();
   return { sports: [], games: [] };
 }
 
-export async function getSportBoard(sport: string) {
-  const user = await requireServerUser();
+export async function getSportBoard(_sport: string) {
+  await requireServerUser();
   return { games: [], players: [] };
 }
 
-export async function getEventBoard(eventId: string) {
-  const user = await requireServerUser();
+export async function getEventBoard(_eventId: string) {
+  await requireServerUser();
   return { event: null, props: [] };
 }
 
-export async function getPlayerBoard(playerId: string) {
-  const user = await requireServerUser();
+export async function getPlayerBoard(_playerId: string) {
+  await requireServerUser();
   return { player: null, stats: [] };
 }
