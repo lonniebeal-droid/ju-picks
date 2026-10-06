@@ -46,6 +46,10 @@ jobs:
 
   deploy:
     needs: build
+    # GitHub Pages is not enabled on this private repo yet (deploy-pages returns 404).
+    # Keep the build as a verification gate; only deploy once Ju enables Pages and
+    # sets the repo variable PAGES_ENABLED=true (Settings > Secrets and variables > Actions > Variables).
+    if: ${{ vars.PAGES_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
